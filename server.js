@@ -3,6 +3,9 @@ const axios=require('axios');
 const cors=require('cors');
 const app=express();
 const PORT = process.env.PORT || 3000;
+require('dotenv').config();
+const token = process.env.GITHUB_TOKEN;
+
 
 app.use(cors());
 app.use(express.json());
@@ -20,13 +23,24 @@ async function isSubscribed(userId){
         return false;
       };
 };
+async function isFollowed(userId) {
+    try {
+        const response = await axios.get(`https://api.github.com/users/bytemait/followers`, {
+            headers: { Authorization: `${token}`}
+        });
+        return response.data.some(follower => follower.login === userId);
+    } catch (error) {
+        console.error('GitHub API error:', error);
+        return false;
+    }
+}
 
 app.post('./check-access',async (req,res)=>{
     const {userId}=req.body;
     const subscribed= await isSubscribed(userId);
-    //const followed= await isFollowed(userId);
+    const followed= await isFollowed(userId);
 
-    if(subscribed){
+    if(subscribed||followed){
         return res.status(200).json({access: true});
     }else{
         return res.status(403).json({access:false,message:'Please subscribe or follow.' });
